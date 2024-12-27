@@ -5,6 +5,7 @@
 (define-constant ERR_NOT_AUTHORIZED (err u401))
 (define-constant ERR_INVALID_SHARES (err u402))
 (define-constant ERR_ARTWORK_EXISTS (err u403))
+(define-constant ERR_LIST_FULL (err u404))
 
 ;; Data Maps
 (define-map artwork-ownership
@@ -59,21 +60,24 @@
     (share uint)
     (contribution-type (string-ascii 20)))
     (let
-        ((artwork (unwrap! (map-get? artwork-ownership { artwork-id: artwork-id }) ERR_NOT_AUTHORIZED)))
+        ((artwork (unwrap! (map-get? artwork-ownership { artwork-id: artwork-id }) ERR_NOT_AUTHORIZED))
+         (current-contributors (get contributors artwork))
+         (new-contributor {
+             address: contributor,
+             share: share,
+             contribution-type: contribution-type
+         }))
         (asserts! (is-eq (var-get contract-admin) tx-sender) ERR_NOT_AUTHORIZED)
         (asserts! (<= (+ share (get total-shares artwork)) u100) ERR_INVALID_SHARES)
-        (ok (map-set artwork-ownership
-            { artwork-id: artwork-id }
-            (merge artwork {
-                contributors: (append (get contributors artwork)
-                    {
-                        address: contributor,
-                        share: share,
-                        contribution-type: contribution-type
-                    }
-                ),
-                total-shares: (+ share (get total-shares artwork))
-            })))
+        (let
+            ((updated-contributors (unwrap! (as-max-len? (append current-contributors new-contributor) u50) ERR_LIST_FULL)))
+            (ok (map-set artwork-ownership
+                { artwork-id: artwork-id }
+                (merge artwork {
+                    contributors: updated-contributors,
+                    total-shares: (+ share (get total-shares artwork))
+                })))
+        )
     )
 )
 
@@ -85,10 +89,34 @@
 (define-read-only (get-contributor-share 
     (artwork-id uint)
     (contributor principal))
-    (match (map-get? artwork-ownership { artwork-id: artwork-id })
-        artwork (some (filter #(is-eq (get address %) contributor) 
-                            (get contributors artwork)))
-        none))
+    (let ((artwork (map-get? artwork-ownership { artwork-id: artwork-id })))
+        (match artwork
+            success (filter-contributor (get contributors success) contributor)
+            error none
+        )
+    )
+)
+
+(define-private (filter-contributor (contributors (list 50 {
+    address: principal,
+    share: uint,
+    contribution-type: (string-ascii 20)
+})) (target-contributor principal))
+    (let ((filtered-list (filter is-matching-contributor contributors)))
+        (match (len filtered-list)
+            0 none
+            n (some (element-at filtered-list u0))
+        )
+    )
+)
+
+(define-private (is-matching-contributor (contributor {
+    address: principal,
+    share: uint,
+    contribution-type: (string-ascii 20)
+}))
+    (is-eq (get address contributor) tx-sender)
+)
 
 ;; Administrative
 (define-data-var contract-admin principal tx-sender)
