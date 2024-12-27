@@ -1,78 +1,80 @@
-;; Contribution Manager Contract
-(define-data-var contribution-count uint u0)
+;; contribution-manager.clar
+;; ArtCollab Contribution Management Contract
 
-(define-map contributions 
+;; Constants
+(define-constant contract-owner tx-sender)
+(define-constant err-owner-only (err u100))
+(define-constant err-invalid-contribution (err u101))
+
+;; Data Variables
+(define-data-var next-contribution-id uint u0)
+
+;; Data Maps
+(define-map contributions
     { contribution-id: uint }
     {
         artist: principal,
-        artwork-hash: (string-ascii 64),
-        timestamp: uint,
+        artwork-id: uint,
         contribution-type: (string-ascii 20),
-        weight: uint
+        metadata-url: (string-ascii 256),
+        timestamp: uint,
+        weight: uint,
+        status: (string-ascii 10)
     }
 )
 
+(define-map artwork-contributors
+    { artwork-id: uint }
+    { contributors: (list 50 principal) }
+)
+
+;; Public Functions
 (define-public (submit-contribution 
-    (artwork-hash (string-ascii 64))
+    (artwork-id uint)
     (contribution-type (string-ascii 20))
+    (metadata-url (string-ascii 256))
     (weight uint))
     (let 
-        (
-            (contribution-id (+ (var-get contribution-count) u1))
+        ((contribution-id (+ (var-get next-contribution-id) u1)))
+        (begin
+            (asserts! (is-valid-contribution contribution-type weight) err-invalid-contribution)
+            (map-set contributions
+                { contribution-id: contribution-id }
+                {
+                    artist: tx-sender,
+                    artwork-id: artwork-id,
+                    contribution-type: contribution-type,
+                    metadata-url: metadata-url,
+                    timestamp: block-height,
+                    weight: weight,
+                    status: "pending"
+                }
+            )
+            (var-set next-contribution-id contribution-id)
+            (ok contribution-id)
         )
-        (map-set contributions
-            { contribution-id: contribution-id }
-            {
-                artist: tx-sender,
-                artwork-hash: artwork-hash,
-                timestamp: block-height,
-                contribution-type: contribution-type,
-                weight: weight
-            }
-        )
-        (var-set contribution-count contribution-id)
-        (ok contribution-id)
     )
 )
 
-;; Ownership Contract
-(define-map ownership
-    { artwork-id: uint }
-    {
-        contributors: (list 50 principal),
-        shares: (list 50 uint)
-    }
-)
-
-(define-public (register-ownership
-    (artwork-id uint)
-    (contributors (list 50 principal))
-    (shares (list 50 uint)))
-    (begin
-        (map-set ownership
-            { artwork-id: artwork-id }
-            {
-                contributors: contributors,
-                shares: shares
-            }
+;; Private Functions
+(define-private (is-valid-contribution (type (string-ascii 20)) (weight uint))
+    (and
+        (or 
+            (is-eq type "concept")
+            (is-eq type "linework")
+            (is-eq type "coloring")
+            (is-eq type "background")
+            (is-eq type "details")
         )
-        (ok true)
+        (<= weight u100)
     )
 )
 
-;; Revenue Distribution Contract
-(define-map revenue-pool
-    { artwork-id: uint }
-    { balance: uint }
+;; Read-Only Functions
+(define-read-only (get-contribution (contribution-id uint))
+    (map-get? contributions { contribution-id: contribution-id })
 )
 
-(define-public (distribute-revenue (artwork-id uint))
-    (let (
-        (artwork-data (unwrap! (map-get? ownership { artwork-id: artwork-id })
-            (err u1)))
-        (pool (unwrap! (map-get? revenue-pool { artwork-id: artwork-id })
-            (err u2)))
-    )
-    ;; Distribution logic here
-    (ok true))
+(define-read-only (get-artwork-contributors (artwork-id uint))
+    (map-get? artwork-contributors { artwork-id: artwork-id })
 )
