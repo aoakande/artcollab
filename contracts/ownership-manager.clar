@@ -76,3 +76,26 @@
             })))
     )
 )
+
+;; Read-Only Functions
+(define-read-only (get-artwork-ownership (artwork-id uint))
+    (map-get? artwork-ownership { artwork-id: artwork-id })
+)
+
+(define-read-only (get-contributor-share 
+    (artwork-id uint)
+    (contributor principal))
+    (match (map-get? artwork-ownership { artwork-id: artwork-id })
+        artwork (some (filter #(is-eq (get address %) contributor) 
+                            (get contributors artwork)))
+        none))
+
+;; Administrative
+(define-data-var contract-admin principal tx-sender)
+
+(define-public (set-contract-admin (new-admin principal))
+    (begin
+        (asserts! (is-eq tx-sender (var-get contract-admin)) ERR_NOT_AUTHORIZED)
+        (ok (var-set contract-admin new-admin))
+    )
+)
