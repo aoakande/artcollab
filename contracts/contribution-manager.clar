@@ -45,7 +45,7 @@
                     artwork-id: artwork-id,
                     contribution-type: contribution-type,
                     metadata-url: metadata-url,
-                    timestamp: block-height,
+                    timestamp: block-height,  ;; Fixed: Using block-height directly
                     weight: weight,
                     status: "pending"
                 }
