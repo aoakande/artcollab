@@ -1,7 +1,14 @@
 # ArtCollab: Decentralized Artist Collaboration Platform
 
+![Stacks](https://img.shields.io/badge/Stacks-Blockchain-blue)
+![Clarity](https://img.shields.io/badge/Clarity-Smart%20Contracts-brightgreen)
+![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
+
 ## Overview
 ArtCollab revolutionizes digital art collaboration by leveraging the Stacks blockchain to ensure fair attribution and automatic revenue distribution for collaborative artwork. Built with Clarity smart contracts, it provides a trustless platform for artists to work together while maintaining transparent ownership and revenue sharing.
+
+## Tags
+`#blockchain` `#stacks` `#clarity` `#smartcontracts`  `#trade` `#logistics` `#shipping` `#decentralized` `#dapp` `#bitcoin` 
 
 ## Quick Start
 
