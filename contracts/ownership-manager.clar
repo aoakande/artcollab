@@ -90,10 +90,9 @@
     (artwork-id uint)
     (contributor principal))
     (let ((artwork (map-get? artwork-ownership { artwork-id: artwork-id })))
-        (match artwork
-            success (filter-contributor (get contributors success) contributor)
-            error none
-        )
+        (match artwork 
+            art-data (filter-contributor (get contributors art-data) contributor)
+            none)
     )
 )
 
@@ -103,9 +102,9 @@
     contribution-type: (string-ascii 20)
 })) (target-contributor principal))
     (let ((filtered-list (filter is-matching-contributor contributors)))
-        (match (len filtered-list)
-            0 none
-            n (some (element-at filtered-list u0))
+        (if (> (len filtered-list) u0)
+            (some (element-at filtered-list u0))
+            none
         )
     )
 )
